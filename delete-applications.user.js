@@ -16,6 +16,7 @@ For installation instructions, see https://scpwiki.com/usertools
 class Message {
   constructor(messageElement) {
     this.selector = messageElement.querySelector("input[type=checkbox]")
+    this.id = this.selector.value
 
     // Extract the sender and the subject
     const from = messageElement.querySelector("td span.from span.printuser")
@@ -36,24 +37,36 @@ class Message {
   get isSelected() { return this.selector.checked }
 }
 
-function deleteApplications() {
-  const messages = getMessages()
+async function deleteApplications(iteratePages = false) {
+  const applicationIds = []
+  const messageElement = document.getElementById("message-area")
 
-  // If no messages are selected, select all messages
-  if (countSelected(messages) === 0) {
-    messages.forEach(message => message.select())
-  }
+  do {
+    const messages = getMessagesOnPage()
 
-  // Deselect all messages that are not applications
-  messages.forEach(message => {
-    if (!message.isApplication) message.deselect()
-  })
+    // If no messages are selected, select all messages
+    if (countSelected(messages) === 0) {
+      messages.forEach(message => message.select())
+    }
 
-  // Delete all selected messages
-  deleteMessages()
+    // Deselect all messages that are not applications
+    messages.forEach(message => {
+      if (!message.isApplication) message.deselect()
+    })
+
+    // Save the IDs of all selected messages
+    applicationIds.push(
+      messages.filter(message => message.isSelected).map(message => message.id)
+    )
+    
+    if (iteratePages) iteratePages = await nextPage(messageElement)
+  } while (iteratePages)
+
+  // Delete all saved messages
+  deleteMessages(applicationIds)
 }
 
-function getMessages() {
+function getMessagesOnPage() {
   return Array.from(
     document.querySelectorAll("tr.message")
   ).map(el => new Message(el))
@@ -63,25 +76,63 @@ function countSelected(messages) {
   return messages.reduce((a, b) => a + b.isSelected, 0)
 }
 
-function deleteMessages() {
-  WIKIDOT.modules.DashboardMessagesModule.removeSelectedMessages()
+function deleteMessages(ids) {
+  console.log(ids)
+}
+
+/**
+ * Iterate the next page of messages.
+ * 
+ * Returns false if this is the last page, otherwise returns true after the
+ * page has loaded.
+ */
+async function nextPage(messageElement) {
+  const pager = messageElement.querySelector(".pager")
+  if (pager == null) return false
+  const nextButton = pager.querySelector(".target:last-child a")
+  if (nextButton == null) return false
+  if (nextButton.textContent.trim() !== "next »") return false
+
+  // Wait until the next page has finished loading
+  await new Promise((resolve, reject) => {
+    const observer = new MutationObserver(() => {
+      observer.disconnect()
+      resolve()
+    })
+    observer.observe(messageElement, { childList: true })
+
+    nextButton.click()
+  })
+  return true
 }
 
 addEventListener("load", () => {
-  // Create the button
-  const deleteAppsButton = document.createElement("button")
-  deleteAppsButton.innerText = "Delete applications"
-  deleteAppsButton.classList.add("red", "btn", "btn-xs", "btn-danger")
-  deleteAppsButton.title = `
+  // Create the buttons
+  const deletePageButton = document.createElement("button")
+  deletePageButton.innerText = "Delete applications on page"
+  deletePageButton.classList.add("red", "btn", "btn-xs", "btn-danger")
+  deletePageButton.title = `
     Delete selected applications.
     If no applications are selected, delete all applications on current page.
   `.replace(/\s+/g, " ")
-  deleteAppsButton.addEventListener("click", deleteApplications)
+  deletePageButton.addEventListener("click", () => deleteApplications(false))
+
+  const deleteAllButton = document.createElement("button")
+  deleteAllButton.innerText = "Delete all applications"
+  deleteAllButton.classList.add("red", "btn", "btn-xs", "btn-danger")
+  deleteAllButton.title = `
+    Delete all applications in your inbox.
+    May take a while if you have a lot.
+  `.replace(/\s+/g, " ")
+  deleteAllButton.addEventListener("click", () => deleteApplications(true))
 
   // Insert the button
   const buttonLocation = document.getElementById("message-area").parentElement
   buttonLocation.style.display = "flex"
   buttonLocation.style.flexDirection = "column"
   buttonLocation.style.alignItems = "flex-end"
-  buttonLocation.prepend(deleteAppsButton)
+
+  const deleteButtonsContainer = document.createElement("span")
+  deleteButtonsContainer.append(deletePageButton, " ", deleteAllButton)
+  buttonLocation.prepend(deleteButtonsContainer)
 })
