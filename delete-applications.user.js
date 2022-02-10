@@ -63,7 +63,7 @@ async function deleteApplications(iteratePages = false) {
   } while (iteratePages)
 
   // Delete all saved messages
-  deleteMessages(applicationIds)
+  deleteMessages(applicationIds.flat())
 }
 
 function getMessagesOnPage() {
@@ -77,7 +77,26 @@ function countSelected(messages) {
 }
 
 function deleteMessages(ids) {
-  console.log(ids)
+  // Produce a confirmation modal with the number of applications to delete
+  const confirmModal = new OZONE.dialogs.ConfirmationDialog()
+  confirmModal.content = `Delete ${ids.length} applications?`
+  confirmModal.buttons = [ "cancel", "delete applications" ]
+  confirmModal.addButtonListener("cancel", confirmModal.close)
+  confirmModal.addButtonListener("delete applications", () => {
+    const request = {
+      action: "DashboardMessageAction",
+      event: "removeMessages",
+      messages: ids
+    }
+    OZONE.ajax.requestModule(null, request, () => {
+      var successModal = new OZONE.dialogs.SuccessBox();
+      successModal.content = "Deleted applications."
+      successModal.show()
+      WIKIDOT.modules.DashboardMessagesModule.app.refresh()
+    })
+  })
+  confirmModal.focusButton = "cancel"
+  confirmModal.show()
 }
 
 /**
