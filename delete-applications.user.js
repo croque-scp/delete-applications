@@ -79,15 +79,9 @@ addEventListener("load", () => {
   deleteAppsButton.addEventListener("click", deleteApplications)
 
   // Insert the button
-  // Message area will initially be empty while the module loads
-  // Lazy but effective: wait for content to appear, max of 5 secs
-  function insertButton(count) {
-    try {
-      const messageArea = document.getElementById("message-area")
-      messageArea.firstElementChild.lastElementChild.prepend(deleteAppsButton)
-    } catch(e) {
-      if (count < 300) requestAnimationFrame(() => insertButton(count + 1))
-    }
-  }
-  insertButton(0)
+  const buttonLocation = document.getElementById("message-area").parentElement
+  buttonLocation.style.display = "flex"
+  buttonLocation.style.flexDirection = "column"
+  buttonLocation.style.alignItems = "flex-end"
+  buttonLocation.prepend(deleteAppsButton)
 })
