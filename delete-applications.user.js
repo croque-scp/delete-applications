@@ -89,7 +89,7 @@ function deleteMessages(ids) {
       messages: ids
     }
     OZONE.ajax.requestModule(null, request, () => {
-      var successModal = new OZONE.dialogs.SuccessBox();
+      const successModal = new OZONE.dialogs.SuccessBox()
       successModal.content = "Deleted applications."
       successModal.show()
       WIKIDOT.modules.DashboardMessagesModule.app.refresh()
