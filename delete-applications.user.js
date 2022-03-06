@@ -13,6 +13,8 @@ For installation instructions, see https://scpwiki.com/usertools
 // @include     https://www.wikidot.com/account/messages*
 // ==/UserScript==
 
+let deleteButtonsContainer
+
 class Message {
   constructor(messageElement) {
     this.selector = messageElement.querySelector("input[type=checkbox]")
@@ -99,6 +101,15 @@ function deleteMessages(ids) {
   confirmModal.show()
 }
 
+function shouldShowDeleteButtons(hash) {
+  return ["", "#/inbox"].includes(hash)
+}
+
+function toggleDeleteButtons() {
+  deleteButtonsContainer.style.display =
+    shouldShowDeleteButtons(location.hash) ? "" : "none"
+}
+
 /**
  * Iterate the next page of messages.
  * 
@@ -113,7 +124,7 @@ async function nextPage(messageElement) {
   if (nextButton.textContent.trim() !== "next »") return false
 
   // Wait until the next page has finished loading
-  await new Promise((resolve, reject) => {
+  await new Promise(resolve => {
     const observer = new MutationObserver(() => {
       observer.disconnect()
       resolve()
@@ -145,10 +156,18 @@ addEventListener("load", () => {
   `.replace(/\s+/g, " ")
   deleteAllButton.addEventListener("click", () => deleteApplications(true))
 
-  const deleteButtonsContainer = document.createElement("div")
+  deleteButtonsContainer = document.createElement("div")
   deleteButtonsContainer.style.textAlign = "right"
   deleteButtonsContainer.append(deletePageButton, " ", deleteAllButton)
+  toggleDeleteButtons()
 
   const buttonLocation = document.getElementById("message-area").parentElement
   buttonLocation.prepend(deleteButtonsContainer)
+})
+
+// Detect clicks to messages and inbox tabs and hide/show buttons as appropriate
+addEventListener("click", () => {
+  setTimeout(() => {
+    toggleDeleteButtons()
+  }, 500)
 })
