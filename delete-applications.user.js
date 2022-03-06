@@ -7,7 +7,7 @@ For installation instructions, see https://scpwiki.com/usertools
 // ==UserScript==
 // @name        Wikidot applications deleter
 // @description Adds a button to delete applications from your Wikidot inbox.
-// @version     v1.0.0
+// @version     v1.0.1
 // @updateURL   https://github.com/croque-scp/delete-applications/raw/main/delete-applications.user.js
 // @downloadURL https://github.com/croque-scp/delete-applications/raw/main/delete-applications.user.js
 // @include     https://www.wikidot.com/account/messages*
