@@ -145,13 +145,10 @@ addEventListener("load", () => {
   `.replace(/\s+/g, " ")
   deleteAllButton.addEventListener("click", () => deleteApplications(true))
 
-  // Insert the button
-  const buttonLocation = document.getElementById("message-area").parentElement
-  buttonLocation.style.display = "flex"
-  buttonLocation.style.flexDirection = "column"
-  buttonLocation.style.alignItems = "flex-end"
-
-  const deleteButtonsContainer = document.createElement("span")
+  const deleteButtonsContainer = document.createElement("div")
+  deleteButtonsContainer.style.textAlign = "right"
   deleteButtonsContainer.append(deletePageButton, " ", deleteAllButton)
+
+  const buttonLocation = document.getElementById("message-area").parentElement
   buttonLocation.prepend(deleteButtonsContainer)
 })
