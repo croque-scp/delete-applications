@@ -46,6 +46,7 @@ async function deleteApplications(deleteAll = false) {
   const messageElement = document.getElementById("message-area")
 
   let goToNextPage = true
+  let thereAreMorePages = true
 
   firstPage(messageElement)
 
@@ -73,8 +74,8 @@ async function deleteApplications(deleteAll = false) {
     // messages (i.e. deleteAll is false), don't go to the next page
     if (selectedMessages.length === 0 && !deleteAll) goToNextPage = false
 
-    if (goToNextPage) await nextPage(messageElement)
-  } while (goToNextPage)
+    if (goToNextPage) thereAreMorePages = await nextPage(messageElement)
+  } while (goToNextPage && thereAreMorePages)
 
   // Delete all saved messages
   deleteMessages(applicationIds.flat())
