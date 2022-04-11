@@ -15,6 +15,8 @@ For installation instructions, see https://scpwiki.com/usertools
 
 let deleteButtonsContainer
 
+const deleterDebug = log => console.debug("Applications deleter:", log)
+
 class Message {
   constructor(messageElement) {
     this.selector = messageElement.querySelector("input[type=checkbox]")
@@ -115,6 +117,7 @@ function toggleDeleteButtons() {
 }
 
 async function firstPage(messageElement) {
+  deleterDebug("Going to first page")
   const pager = messageElement.querySelector(".pager")
   if (pager == null) return
   const currentPageButton = pager.querySelector(".current")
@@ -145,6 +148,7 @@ async function firstPage(messageElement) {
  * page has loaded.
  */
 async function nextPage(messageElement) {
+  deleterDebug("Going to next page")
   const pager = messageElement.querySelector(".pager")
   if (pager == null) return false
   const nextButton = pager.querySelector(".target:last-child a")
