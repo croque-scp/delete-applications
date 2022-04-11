@@ -15,6 +15,8 @@ For installation instructions, see https://scpwiki.com/usertools
 
 let deleteButtonsContainer
 
+const deleterDebug = log => console.debug("Applications deleter:", log)
+
 class Message {
   constructor(messageElement) {
     this.selector = messageElement.querySelector("input[type=checkbox]")
@@ -39,9 +41,14 @@ class Message {
   get isSelected() { return this.selector.checked }
 }
 
-async function deleteApplications(iteratePages = false) {
+async function deleteApplications(deleteAll = false) {
   const applicationIds = []
   const messageElement = document.getElementById("message-area")
+
+  let goToNextPage = true
+  let thereAreMorePages = true
+
+  firstPage(messageElement)
 
   do {
     const messages = getMessagesOnPage()
@@ -57,15 +64,23 @@ async function deleteApplications(iteratePages = false) {
     })
 
     // Save the IDs of all selected messages
-    applicationIds.push(
-      messages.filter(message => message.isSelected).map(message => message.id)
-    )
-    
-    if (iteratePages) iteratePages = await nextPage(messageElement)
-  } while (iteratePages)
+    const selectedMessages = messages
+      .filter(message => message.isSelected)
+      .map(message => message.id)
+    deleterDebug(`Found ${selectedMessages.length} applications`)
+    applicationIds.push(selectedMessages)
+
+    // If there were no selected messages, and we are only deleting recent
+    // messages (i.e. deleteAll is false), don't go to the next page
+    if (selectedMessages.length === 0 && !deleteAll) goToNextPage = false
+
+    if (goToNextPage) thereAreMorePages = await nextPage(messageElement)
+  } while (goToNextPage && thereAreMorePages)
 
   // Delete all saved messages
   deleteMessages(applicationIds.flat())
+
+  firstPage(messageElement)
 }
 
 function getMessagesOnPage() {
@@ -82,7 +97,7 @@ function deleteMessages(ids) {
   // Produce a confirmation modal with the number of applications to delete
   const confirmModal = new OZONE.dialogs.ConfirmationDialog()
   confirmModal.content = `Delete ${ids.length} applications?`
-  confirmModal.buttons = [ "cancel", "delete applications" ]
+  confirmModal.buttons = ["cancel", "delete applications"]
   confirmModal.addButtonListener("cancel", confirmModal.close)
   confirmModal.addButtonListener("delete applications", () => {
     const request = {
@@ -102,12 +117,37 @@ function deleteMessages(ids) {
 }
 
 function shouldShowDeleteButtons(hash) {
-  return ["", "#/inbox"].includes(hash)
+  return hash === "" || hash.indexOf("inbox") !== -1
 }
 
 function toggleDeleteButtons() {
   deleteButtonsContainer.style.display =
     shouldShowDeleteButtons(location.hash) ? "" : "none"
+}
+
+async function firstPage(messageElement) {
+  deleterDebug("Going to first page")
+  const pager = messageElement.querySelector(".pager")
+  if (pager == null) return
+  const currentPageButton = pager.querySelector(".current")
+  if (currentPageButton == null) return
+  if (currentPageButton.textContent.trim() === "1") return
+
+  // The first page button should always be visible
+  const firstPageButton = pager.querySelector(".target [href='#/inbox/p1']")
+  if (firstPageButton == null) return
+
+  // Click the button and return once the page has reloaded
+  await new Promise(resolve => {
+    const observer = new MutationObserver(() => {
+      observer.disconnect()
+      resolve()
+    })
+    observer.observe(messageElement, { childList: true })
+
+    firstPageButton.click()
+  })
+  return true
 }
 
 /**
@@ -117,6 +157,7 @@ function toggleDeleteButtons() {
  * page has loaded.
  */
 async function nextPage(messageElement) {
+  deleterDebug("Going to next page")
   const pager = messageElement.querySelector(".pager")
   if (pager == null) return false
   const nextButton = pager.querySelector(".target:last-child a")
@@ -136,16 +177,17 @@ async function nextPage(messageElement) {
   return true
 }
 
-addEventListener("load", () => {
+(function main() {
   // Create the buttons
-  const deletePageButton = document.createElement("button")
-  deletePageButton.innerText = "Delete applications on page"
-  deletePageButton.classList.add("red", "btn", "btn-xs", "btn-danger")
-  deletePageButton.title = `
-    Delete selected applications.
-    If no applications are selected, delete all applications on current page.
+  const deleteRecentButton = document.createElement("button")
+  deleteRecentButton.innerText = "Delete recent applications"
+  deleteRecentButton.classList.add("red", "btn", "btn-xs", "btn-danger")
+  deleteRecentButton.title = `
+    Delete recent applications.
+    Deletes applications on the first page, then the second, and so on, until
+    a page with no applications is found.
   `.replace(/\s+/g, " ")
-  deletePageButton.addEventListener("click", () => deleteApplications(false))
+  deleteRecentButton.addEventListener("click", () => deleteApplications(false))
 
   const deleteAllButton = document.createElement("button")
   deleteAllButton.innerText = "Delete all applications"
@@ -158,12 +200,12 @@ addEventListener("load", () => {
 
   deleteButtonsContainer = document.createElement("div")
   deleteButtonsContainer.style.textAlign = "right"
-  deleteButtonsContainer.append(deletePageButton, " ", deleteAllButton)
+  deleteButtonsContainer.append(deleteRecentButton, " ", deleteAllButton)
   toggleDeleteButtons()
 
   const buttonLocation = document.getElementById("message-area").parentElement
   buttonLocation.prepend(deleteButtonsContainer)
-})
+})()
 
 // Detect clicks to messages and inbox tabs and hide/show buttons as appropriate
 addEventListener("click", () => {
