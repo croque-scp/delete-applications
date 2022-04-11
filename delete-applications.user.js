@@ -179,14 +179,15 @@ async function nextPage(messageElement) {
 
 (function main() {
   // Create the buttons
-  const deletePageButton = document.createElement("button")
-  deletePageButton.innerText = "Delete applications on page"
-  deletePageButton.classList.add("red", "btn", "btn-xs", "btn-danger")
-  deletePageButton.title = `
-    Delete selected applications.
-    If no applications are selected, delete all applications on current page.
+  const deleteRecentButton = document.createElement("button")
+  deleteRecentButton.innerText = "Delete recent applications"
+  deleteRecentButton.classList.add("red", "btn", "btn-xs", "btn-danger")
+  deleteRecentButton.title = `
+    Delete recent applications.
+    Deletes applications on the first page, then the second, and so on, until
+    a page with no applications is found.
   `.replace(/\s+/g, " ")
-  deletePageButton.addEventListener("click", () => deleteApplications(false))
+  deleteRecentButton.addEventListener("click", () => deleteApplications(false))
 
   const deleteAllButton = document.createElement("button")
   deleteAllButton.innerText = "Delete all applications"
@@ -199,7 +200,7 @@ async function nextPage(messageElement) {
 
   deleteButtonsContainer = document.createElement("div")
   deleteButtonsContainer.style.textAlign = "right"
-  deleteButtonsContainer.append(deletePageButton, " ", deleteAllButton)
+  deleteButtonsContainer.append(deleteRecentButton, " ", deleteAllButton)
   toggleDeleteButtons()
 
   const buttonLocation = document.getElementById("message-area").parentElement

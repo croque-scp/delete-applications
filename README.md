@@ -5,8 +5,9 @@
 
 Adds two buttons to the messages inbox:
 
-* **Delete applications on page:** Deletes all selected applications, or if
-  no messages are selected, deletes all applications on the current page.
+* **Delete recent applications:** Deletes applications on the first page of
+  the user's inbox, then the second, and so on until a page is found that
+  already has no applications.
 * **Delete all applications:** Deletes all applications in the user's
   inbox.
 
@@ -39,5 +40,5 @@ Installation instructions: https://scpwiki.com/usertools#userscripts
    open the JavaScript console.
 3. Paste the userscript into the console and press enter.
 4. Enter one of the following, and then press enter:
-   * `deleteApplications()` to delete applications on the current page
+   * `deleteApplications()` to delete recent applications
    * `deleteApplications(true)` to delete all applications
