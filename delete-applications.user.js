@@ -116,7 +116,7 @@ function deleteMessages(ids) {
 }
 
 function shouldShowDeleteButtons(hash) {
-  return ["", "#/inbox"].includes(hash)
+  return hash === "" || hash.indexOf("inbox") !== -1
 }
 
 function toggleDeleteButtons() {
