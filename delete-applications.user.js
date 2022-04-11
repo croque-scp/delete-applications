@@ -177,7 +177,7 @@ async function nextPage(messageElement) {
   return true
 }
 
-addEventListener("load", () => {
+(function main() {
   // Create the buttons
   const deletePageButton = document.createElement("button")
   deletePageButton.innerText = "Delete applications on page"
@@ -204,7 +204,7 @@ addEventListener("load", () => {
 
   const buttonLocation = document.getElementById("message-area").parentElement
   buttonLocation.prepend(deleteButtonsContainer)
-})
+})()
 
 // Detect clicks to messages and inbox tabs and hide/show buttons as appropriate
 addEventListener("click", () => {
