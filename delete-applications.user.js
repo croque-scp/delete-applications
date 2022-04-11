@@ -41,9 +41,11 @@ class Message {
   get isSelected() { return this.selector.checked }
 }
 
-async function deleteApplications(iteratePages = false) {
+async function deleteApplications(deleteAll = false) {
   const applicationIds = []
   const messageElement = document.getElementById("message-area")
+
+  let goToNextPage = true
 
   firstPage(messageElement)
 
@@ -61,12 +63,18 @@ async function deleteApplications(iteratePages = false) {
     })
 
     // Save the IDs of all selected messages
-    applicationIds.push(
-      messages.filter(message => message.isSelected).map(message => message.id)
-    )
+    const selectedMessages = messages
+      .filter(message => message.isSelected)
+      .map(message => message.id)
+    deleterDebug(`Found ${selectedMessages.length} applications`)
+    applicationIds.push(selectedMessages)
 
-    if (iteratePages) iteratePages = await nextPage(messageElement)
-  } while (iteratePages)
+    // If there were no selected messages, and we are only deleting recent
+    // messages (i.e. deleteAll is false), don't go to the next page
+    if (selectedMessages.length === 0 && !deleteAll) goToNextPage = false
+
+    if (goToNextPage) await nextPage(messageElement)
+  } while (goToNextPage)
 
   // Delete all saved messages
   deleteMessages(applicationIds.flat())
