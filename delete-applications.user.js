@@ -43,6 +43,8 @@ async function deleteApplications(iteratePages = false) {
   const applicationIds = []
   const messageElement = document.getElementById("message-area")
 
+  firstPage(messageElement)
+
   do {
     const messages = getMessagesOnPage()
 
@@ -60,12 +62,14 @@ async function deleteApplications(iteratePages = false) {
     applicationIds.push(
       messages.filter(message => message.isSelected).map(message => message.id)
     )
-    
+
     if (iteratePages) iteratePages = await nextPage(messageElement)
   } while (iteratePages)
 
   // Delete all saved messages
   deleteMessages(applicationIds.flat())
+
+  firstPage(messageElement)
 }
 
 function getMessagesOnPage() {
@@ -82,7 +86,7 @@ function deleteMessages(ids) {
   // Produce a confirmation modal with the number of applications to delete
   const confirmModal = new OZONE.dialogs.ConfirmationDialog()
   confirmModal.content = `Delete ${ids.length} applications?`
-  confirmModal.buttons = [ "cancel", "delete applications" ]
+  confirmModal.buttons = ["cancel", "delete applications"]
   confirmModal.addButtonListener("cancel", confirmModal.close)
   confirmModal.addButtonListener("delete applications", () => {
     const request = {
@@ -108,6 +112,30 @@ function shouldShowDeleteButtons(hash) {
 function toggleDeleteButtons() {
   deleteButtonsContainer.style.display =
     shouldShowDeleteButtons(location.hash) ? "" : "none"
+}
+
+async function firstPage(messageElement) {
+  const pager = messageElement.querySelector(".pager")
+  if (pager == null) return
+  const currentPageButton = pager.querySelector(".current")
+  if (currentPageButton == null) return
+  if (currentPageButton.textContent.trim() === "1") return
+
+  // The first page button should always be visible
+  const firstPageButton = pager.querySelector(".target [href='#/inbox/p1']")
+  if (firstPageButton == null) return
+
+  // Click the button and return once the page has reloaded
+  await new Promise(resolve => {
+    const observer = new MutationObserver(() => {
+      observer.disconnect()
+      resolve()
+    })
+    observer.observe(messageElement, { childList: true })
+
+    firstPageButton.click()
+  })
+  return true
 }
 
 /**
