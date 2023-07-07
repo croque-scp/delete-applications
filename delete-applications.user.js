@@ -7,34 +7,48 @@ For installation instructions, see https://scpwiki.com/usertools
 // ==UserScript==
 // @name        Wikidot applications deleter
 // @description Adds a button to delete applications from your Wikidot inbox.
-// @version     v1.1.0
+// @author      Croquembouche
+// @version     v1.2.0
 // @updateURL   https://github.com/croque-scp/delete-applications/raw/main/delete-applications.user.js
 // @downloadURL https://github.com/croque-scp/delete-applications/raw/main/delete-applications.user.js
 // @supportURL  https://www.wikidot.com/account/messages#/new/2893766
-// @include     https://www.wikidot.com/account/messages*
+// @match       https://www.wikidot.com/account/messages*
 // ==/UserScript==
+
+/* global WIKIDOT, OZONE */
 
 let deleteButtonsContainer
 
 const deleterDebug = log => console.debug("Applications deleter:", log)
 
+/**
+ * Collates details about a message based on its little preview.
+ */
 class Message {
   constructor(messageElement) {
     this.selector = messageElement.querySelector("input[type=checkbox]")
     this.id = this.selector.value
 
     // Extract the sender and the subject
-    const from = messageElement.querySelector("td span.from span.printuser")
+    const from = messageElement.querySelector("td .from .printuser")
     this.fromWikidot = (
       !from.classList.contains("avatarhover") && from.innerText === "Wikidot"
     )
-    this.subject = messageElement.querySelector("span.subject").innerText
+    this.subject = messageElement.querySelector(".subject").innerText
+    this.previewText = messageElement.querySelector(".preview").innerText
 
     // Is this message an application?
     this.isApplication = (
       this.fromWikidot
       && this.subject === "You received a membership application"
     )
+
+    if (this.isApplication) {
+      // Which wiki is the application for?
+      const wikiMatch = this.previewText.match(/applied for membership on (.*), one of your sites/)
+      if (wikiMatch) this.applicationWiki = wikiMatch[1]
+      else this.isApplication = false
+    }
   }
 
   select() { this.selector.checked = true }
@@ -43,7 +57,7 @@ class Message {
 }
 
 async function deleteApplications(deleteAll = false) {
-  const applicationIds = []
+  const applications = []
   const messageElement = document.getElementById("message-area")
 
   let goToNextPage = true
@@ -64,12 +78,11 @@ async function deleteApplications(deleteAll = false) {
       if (!message.isApplication) message.deselect()
     })
 
-    // Save the IDs of all selected messages
+    // Save all selected messages
     const selectedMessages = messages
       .filter(message => message.isSelected)
-      .map(message => message.id)
     deleterDebug(`Found ${selectedMessages.length} applications`)
-    applicationIds.push(selectedMessages)
+    applications.push(selectedMessages)
 
     // If there were no selected messages, and we are only deleting recent
     // messages (i.e. deleteAll is false), don't go to the next page
@@ -79,7 +92,7 @@ async function deleteApplications(deleteAll = false) {
   } while (goToNextPage && thereAreMorePages)
 
   // Delete all saved messages
-  deleteMessages(applicationIds.flat())
+  deleteMessages(applications.flat())
 
   firstPage(messageElement)
 }
@@ -94,17 +107,26 @@ function countSelected(messages) {
   return messages.reduce((a, b) => a + b.isSelected, 0)
 }
 
-function deleteMessages(ids) {
+function deleteMessages(messages) {
+  // Collate the wikis that the applications were for
+  const wikiCounter = new Counter(messages.map(m => m.applicationWiki))
   // Produce a confirmation modal with the number of applications to delete
   const confirmModal = new OZONE.dialogs.ConfirmationDialog()
-  confirmModal.content = `Delete ${ids.length} applications?`
+  confirmModal.content = `
+    <p>Delete ${messages.length} applications?</p>
+    <ul>${
+      Object.entries(wikiCounter).map(
+        ([wiki, count]) => `<li>${wiki}: ${count}</li>`
+      )
+    }</ul>
+  `
   confirmModal.buttons = ["cancel", "delete applications"]
   confirmModal.addButtonListener("cancel", confirmModal.close)
   confirmModal.addButtonListener("delete applications", () => {
     const request = {
       action: "DashboardMessageAction",
       event: "removeMessages",
-      messages: ids
+      messages: messages.map(m => m.id)
     }
     OZONE.ajax.requestModule(null, request, () => {
       const successModal = new OZONE.dialogs.SuccessBox()
@@ -151,9 +173,18 @@ async function firstPage(messageElement) {
   return true
 }
 
+
+/**
+ * Like Python's collections.Counter, returns an object with value keys and
+ * count values. Use with new.
+ */
+function Counter(array) {
+  array.forEach(val => (this[val] = (this[val] || 0) + 1))
+}
+
 /**
  * Iterate the next page of messages.
- * 
+ *
  * Returns false if this is the last page, otherwise returns true after the
  * page has loaded.
  */
