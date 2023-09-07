@@ -8,6 +8,7 @@ For installation instructions, see https://scpwiki.com/usertools
 
 v1.3.0
 - Added changelog.
+- Removed extra commas from the confirmation popup when deleting applications from more than one site.
 
 v1.2.0 (2023-07-07)
 - Added a list of sites to the deletion confirmation popup that tells you which Wikidot sites the applications come from, and how many there are per site.
@@ -139,7 +140,7 @@ function deleteMessages(messages) {
     <ul>${
       Object.entries(wikiCounter).map(
         ([wiki, count]) => `<li>${wiki}: ${count}</li>`
-      )
+      ).join("")
     }</ul>
   `
   confirmModal.buttons = ["cancel", "delete applications"]
