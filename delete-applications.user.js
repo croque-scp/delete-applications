@@ -54,29 +54,35 @@ class Message {
 
     // Extract the sender and the subject
     const from = messageElement.querySelector("td .from .printuser")
-    this.fromWikidot = (
+    this.fromWikidot =
       !from.classList.contains("avatarhover") && from.innerText === "Wikidot"
-    )
     this.subject = messageElement.querySelector(".subject").innerText
     this.previewText = messageElement.querySelector(".preview").innerText
 
     // Is this message an application?
-    this.isApplication = (
-      this.fromWikidot
-      && this.subject === "You received a membership application"
-    )
+    this.isApplication =
+      this.fromWikidot &&
+      this.subject === "You received a membership application"
 
     if (this.isApplication) {
       // Which wiki is the application for?
-      const wikiMatch = this.previewText.match(/applied for membership on (.*), one of your sites/)
+      const wikiMatch = this.previewText.match(
+        /applied for membership on (.*), one of your sites/
+      )
       if (wikiMatch) this.applicationWiki = wikiMatch[1]
       else this.isApplication = false
     }
   }
 
-  select() { this.selector.checked = true }
-  deselect() { this.selector.checked = false }
-  get isSelected() { return this.selector.checked }
+  select() {
+    this.selector.checked = true
+  }
+  deselect() {
+    this.selector.checked = false
+  }
+  get isSelected() {
+    return this.selector.checked
+  }
 }
 
 async function deleteApplications(deleteAll = false) {
@@ -102,13 +108,11 @@ async function deleteApplications(deleteAll = false) {
     })
 
     // Save all selected messages
-    const selectedMessages = messages
-      .filter(message => message.isSelected)
+    const selectedMessages = messages.filter(message => message.isSelected)
     deleterDebug(`Found ${selectedMessages.length} applications`)
     applications.push(selectedMessages)
 
-    // If there were no selected messages, and we are only deleting recent
-    // messages (i.e. deleteAll is false), don't go to the next page
+    // If there were no selected messages, and we are only deleting recent messages (i.e. deleteAll is false), don't go to the next page
     if (selectedMessages.length === 0 && !deleteAll) goToNextPage = false
 
     if (goToNextPage) thereAreMorePages = await nextPage(messageElement)
@@ -121,9 +125,9 @@ async function deleteApplications(deleteAll = false) {
 }
 
 function getMessagesOnPage() {
-  return Array.from(
-    document.querySelectorAll("tr.message")
-  ).map(el => new Message(el))
+  return Array.from(document.querySelectorAll("tr.message")).map(
+    el => new Message(el)
+  )
 }
 
 function countSelected(messages) {
@@ -135,13 +139,12 @@ function deleteMessages(messages) {
   const wikiCounter = new Counter(messages.map(m => m.applicationWiki))
   // Produce a confirmation modal with the number of applications to delete
   const confirmModal = new OZONE.dialogs.ConfirmationDialog()
+  const applicationSitesList = Object.entries(wikiCounter).map(
+    ([wiki, count]) => `<li>${wiki}: ${count}</li>`
+  )
   confirmModal.content = `
     <p>Delete ${messages.length} applications?</p>
-    <ul>${
-      Object.entries(wikiCounter).map(
-        ([wiki, count]) => `<li>${wiki}: ${count}</li>`
-      ).join("")
-    }</ul>
+    <ul>${applicationSitesList.join("")}</ul>
   `
   confirmModal.buttons = ["cancel", "delete applications"]
   confirmModal.addButtonListener("cancel", confirmModal.close)
@@ -149,7 +152,7 @@ function deleteMessages(messages) {
     const request = {
       action: "DashboardMessageAction",
       event: "removeMessages",
-      messages: messages.map(m => m.id)
+      messages: messages.map(m => m.id),
     }
     OZONE.ajax.requestModule(null, request, () => {
       const successModal = new OZONE.dialogs.SuccessBox()
@@ -167,8 +170,9 @@ function shouldShowDeleteButtons(hash) {
 }
 
 function toggleDeleteButtons() {
-  deleteButtonsContainer.style.display =
-    shouldShowDeleteButtons(location.hash) ? "" : "none"
+  deleteButtonsContainer.style.display = shouldShowDeleteButtons(location.hash)
+    ? ""
+    : "none"
 }
 
 async function firstPage(messageElement) {
@@ -196,10 +200,8 @@ async function firstPage(messageElement) {
   return true
 }
 
-
 /**
- * Like Python's collections.Counter, returns an object with value keys and
- * count values. Use with new.
+ * Like Python's collections.Counter, returns an object with value keys and count values. Use with new.
  */
 function Counter(array) {
   array.forEach(val => (this[val] = (this[val] || 0) + 1))
@@ -208,8 +210,7 @@ function Counter(array) {
 /**
  * Iterate the next page of messages.
  *
- * Returns false if this is the last page, otherwise returns true after the
- * page has loaded.
+ * Returns false if this is the last page, otherwise returns true after the page has loaded.
  */
 async function nextPage(messageElement) {
   deleterDebug("Going to next page")
@@ -232,15 +233,14 @@ async function nextPage(messageElement) {
   return true
 }
 
-(function main() {
+;(function main() {
   // Create the buttons
   const deleteRecentButton = document.createElement("button")
   deleteRecentButton.innerText = "Delete recent applications"
   deleteRecentButton.classList.add("red", "btn", "btn-xs", "btn-danger")
   deleteRecentButton.title = `
     Delete recent applications.
-    Deletes applications on the first page, then the second, and so on, until
-    a page with no applications is found.
+    Deletes applications on the first page, then the second, and so on, until a page with no applications is found.
   `.replace(/\s+/g, " ")
   deleteRecentButton.addEventListener("click", () => deleteApplications(false))
 
@@ -263,8 +263,4 @@ async function nextPage(messageElement) {
 })()
 
 // Detect clicks to messages and inbox tabs and hide/show buttons as appropriate
-addEventListener("click", () => {
-  setTimeout(() => {
-    toggleDeleteButtons()
-  }, 500)
-})
+addEventListener("click", () => setTimeout(toggleDeleteButtons, 500))
