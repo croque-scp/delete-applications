@@ -4,6 +4,28 @@ Wikidot applications deleter userscript
 For installation instructions, see https://scpwiki.com/usertools
 */
 
+/* CHANGELOG
+
+v1.3.0
+- Added changelog.
+
+v1.2.0 (2023-07-07)
+- Added a list of sites to the deletion confirmation popup that tells you which Wikidot sites the applications come from, and how many there are per site.
+
+v1.1.0 (2022-04-11)
+- Added new feature 'delete recent applications' that deletes applications page-by-page until encountering a page with no applications.
+- Removed feature 'delete applications on current page'.
+- After scanning pages of messages, script now puts you back on the first page instead of leaving you wherever it stopped.
+- The delete buttons are now visible on all pages of the inbox instead of just the first.
+
+v1.0.1 (2022-03-06)
+- Hid buttons when reading a message.
+- Fixed deletion confirmation popup interfering with message composer UI.
+
+v1.0.0 (2022-03-01)
+- Created userscript.
+*/
+
 // ==UserScript==
 // @name        Wikidot applications deleter
 // @description Adds a button to delete applications from your Wikidot inbox.
