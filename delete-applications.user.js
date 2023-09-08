@@ -45,20 +45,23 @@ v1.0.0 (2022-03-01)
 
 const deleterDebug = log => console.debug("Applications deleter:", log)
 
-const supportUser = `
-  <span class="printuser avatarhover">
-    <a
-      href="http://www.wikidot.com/user:info/croquembouche"
-      onclick="WIKIDOT.page.listeners.userInfo(2893766); return false;"
-    >
-      <img
-        class="small"
-        src="https://www.wikidot.com/avatar.php?userid=2893766"
-        style="background-image:url(http://www.wikidot.com/userkarma.php?u=2893766)"
-      >
-      Croquembouche
+const supportUser = showAvatar => `
+  ${
+    showAvatar
+      ? `<span class="printuser avatarhover" style="white-space: nowrap">`
+      : ""
+  }
+    <a href="https://www.wikidot.com/user:info/croquembouche" onclick="WIKIDOT.page.listeners.userInfo(2893766); return false;" >
+      ${
+        showAvatar
+          ? `<img
+              class="small"
+              src="https://www.wikidot.com/avatar.php?userid=2893766" style="background-image:url(https://www.wikidot.com/userkarma.php?u=2893766)"
+            >`
+          : ""
+      }Croquembouche
     </a>
-  </span>
+  ${showAvatar ? `</span>` : ""}
 `
 
 function getMessagesOnPage() {
@@ -228,7 +231,7 @@ function createDeleteConfirmationModal(messages) {
       const errorModal = new OZONE.dialogs.ErrorDialog()
       errorModal.content = `
         <p>Failed to delete applications.</p>
-        <p>Please send a message to ${supportUser}.</p>
+        <p>Please send a message to ${supportUser(true)}.</p>
       `
       errorModal.show()
     }
@@ -362,7 +365,7 @@ async function nextPage(messageElement) {
   // Create the buttons
   const deleteRecentButton = document.createElement("button")
   deleteRecentButton.innerText = "Delete recent applications"
-  deleteRecentButton.classList.add("red", "btn", "btn-xs", "btn-danger")
+  deleteRecentButton.classList.add("red", "btn", "btn-danger")
   deleteRecentButton.title = `
     Delete recent applications.
     Deletes applications on the first page, then the second, and so on, until a page with no applications is found.
@@ -371,7 +374,7 @@ async function nextPage(messageElement) {
 
   const deleteAllButton = document.createElement("button")
   deleteAllButton.innerText = "Delete all applications"
-  deleteAllButton.classList.add("red", "btn", "btn-xs", "btn-danger")
+  deleteAllButton.classList.add("red", "btn", "btn-danger")
   deleteAllButton.title = `
     Delete all applications in your inbox.
     May take a while if you have a lot.
@@ -379,18 +382,39 @@ async function nextPage(messageElement) {
   deleteAllButton.addEventListener("click", () => deleteApplications(true))
 
   const deleteButtonsContainer = document.createElement("div")
-  deleteButtonsContainer.style.textAlign = "right"
-  deleteButtonsContainer.style.display = shouldShowDeleteButtons() ? "" : "none"
-  deleteButtonsContainer.append(deleteRecentButton, " ", deleteAllButton)
+  deleteButtonsContainer.style.border = "thin solid lightgrey"
+  deleteButtonsContainer.style.borderRadius = "0.5rem"
+  deleteButtonsContainer.style.display = shouldShowDeleteButtons()
+    ? "flex"
+    : "none"
+  deleteButtonsContainer.style.flexDirection = "column"
+  deleteButtonsContainer.style.maxWidth = "max-content"
+  deleteButtonsContainer.style.padding = "1rem 1rem 0"
+  deleteButtonsContainer.style.margin = "1.5rem 0 1.5rem auto"
+  deleteButtonsContainer.innerHTML = `
+    <p style="font-size: smaller">
+      <a href="https://scpwiki.com/usertools#delete-applications">Delete applications userscript</a> by ${supportUser()}
+    </p>
+    <p id="delete-buttons" style="
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    "></p>
+  `
 
-  const buttonLocation = document.getElementById("message-area").parentElement
-  buttonLocation.prepend(deleteButtonsContainer)
+  document
+    .getElementById("message-area")
+    .parentElement.prepend(deleteButtonsContainer)
+  document
+    .getElementById("delete-buttons")
+    .append(deleteRecentButton, deleteAllButton)
 
   // Detect clicks to messages and inbox tabs and hide/show buttons as appropriate
   addEventListener("click", () =>
     setTimeout(() => {
       deleteButtonsContainer.style.display = shouldShowDeleteButtons()
-        ? ""
+        ? "flex"
         : "none"
     }, 500)
   )
