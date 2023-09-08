@@ -33,7 +33,7 @@ v1.0.0 (2022-03-01)
 // @name        Wikidot applications deleter
 // @description Adds a button to delete applications from your Wikidot inbox.
 // @author      Croquembouche
-// @version     v1.2.0
+// @version     v1.3.0
 // @updateURL   https://github.com/croque-scp/delete-applications/raw/main/delete-applications.user.js
 // @downloadURL https://github.com/croque-scp/delete-applications/raw/main/delete-applications.user.js
 // @supportURL  https://www.wikidot.com/account/messages#/new/2893766
