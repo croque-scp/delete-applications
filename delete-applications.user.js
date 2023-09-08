@@ -138,7 +138,12 @@ async function deleteApplications(deleteAll = false) {
   let goToNextPage = true
   let thereAreMorePages = true
 
-  firstPage(messageElement)
+  const scanningModal = new OZONE.dialogs.SuccessBox()
+  scanningModal.content = "Scanning your inbox for applications..."
+  scanningModal.timeout = null
+  scanningModal.show()
+
+  await firstPage(messageElement)
 
   do {
     const messages = getMessagesOnPage()
@@ -164,10 +169,11 @@ async function deleteApplications(deleteAll = false) {
     if (goToNextPage) thereAreMorePages = await nextPage(messageElement)
   } while (goToNextPage && thereAreMorePages)
 
+  // Reset UI back to the first page
+  await firstPage(messageElement)
+
   // Delete all saved messages
   createDeleteConfirmationModal(applications.flat())
-
-  firstPage(messageElement)
 }
 
 /**
