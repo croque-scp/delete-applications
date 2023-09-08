@@ -10,6 +10,7 @@ v1.3.0
 - Added changelog.
 - Removed extra commas from the confirmation popup when deleting applications from more than one site.
 - Deletes now execute in batches of 100 separated by a short delay to bypass Wikidot's single-request limit of 996.
+- Made buttons larger and added more support links.
 
 v1.2.0 (2023-07-07)
 - Added a list of sites to the deletion confirmation popup that tells you which Wikidot sites the applications come from, and how many there are per site.
@@ -141,9 +142,8 @@ async function deleteApplications(deleteAll = false) {
   let goToNextPage = true
   let thereAreMorePages = true
 
-  const scanningModal = new OZONE.dialogs.SuccessBox()
+  const scanningModal = new OZONE.dialogs.WaitBox()
   scanningModal.content = "Scanning your inbox for applications..."
-  scanningModal.timeout = null
   scanningModal.show()
 
   await firstPage(messageElement)
@@ -194,6 +194,9 @@ function createDeleteConfirmationModal(messages) {
   )
   confirmModal.content = `
     <p>Delete ${messagesCount} applications?</p>
+    <p><em>Please report any issues during the deletion process to ${supportUser(
+      true
+    )}.</em></p>
     <ul>${applicationSitesList.join("")}</ul>
   `
   confirmModal.buttons = ["cancel", "delete applications"]
@@ -225,7 +228,9 @@ function createDeleteConfirmationModal(messages) {
 
     if (success) {
       const successModal = new OZONE.dialogs.SuccessBox()
-      successModal.content = `Deleted ${messagesCount} applications.`
+      successModal.content = `
+        <p>Deleted ${messagesCount} applications.<p>
+      `
       successModal.show()
     } else {
       const errorModal = new OZONE.dialogs.ErrorDialog()
@@ -369,7 +374,9 @@ async function nextPage(messageElement) {
   deleteRecentButton.title = `
     Delete recent applications.
     Deletes applications on the first page, then the second, and so on, until a page with no applications is found.
-  `.replace(/\s+/g, " ")
+  `
+    .replace(/\s+/g, " ")
+    .trim()
   deleteRecentButton.addEventListener("click", () => deleteApplications(false))
 
   const deleteAllButton = document.createElement("button")
@@ -378,7 +385,9 @@ async function nextPage(messageElement) {
   deleteAllButton.title = `
     Delete all applications in your inbox.
     May take a while if you have a lot.
-  `.replace(/\s+/g, " ")
+  `
+    .replace(/\s+/g, " ")
+    .trim()
   deleteAllButton.addEventListener("click", () => deleteApplications(true))
 
   const deleteButtonsContainer = document.createElement("div")
