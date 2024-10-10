@@ -6,7 +6,10 @@ For installation instructions, see https://scpwiki.com/usertools
 
 /* CHANGELOG
 
-v1.3.0
+v1.3.1 (2024-10-10)
+- Userscript controls are now stored in a generic container available to other userscripts.
+
+v1.3.0 (2023-09-08)
 - Added changelog.
 - Removed extra commas from the confirmation popup when deleting applications from more than one site.
 - Deletes now execute in batches of 100 separated by a short delay to bypass Wikidot's single-request limit of 996.
@@ -367,6 +370,46 @@ async function nextPage(messageElement) {
 }
 
 ;(function () {
+  // Set up container for userscript controls, unless another userscript already did
+  let scriptControlContainer = document.getElementById("messages-userscripts")
+  if (!scriptControlContainer) {
+    scriptControlContainer = document.createElement("div")
+    scriptControlContainer.id = "messages-userscripts"
+    scriptControlContainer.style.display = "flex"
+    scriptControlContainer.style.justifyContent = "end"
+    scriptControlContainer.style.flexWrap = "wrap"
+    scriptControlContainer.style.marginBlock = "1.5rem"
+    scriptControlContainer.style.gap = "1.5rem"
+
+    document
+      .getElementById("message-area")
+      .parentElement.prepend(scriptControlContainer)
+  }
+
+  const deleteButtonsContainer = document.createElement("div")
+  deleteButtonsContainer.id = "delete-applications-controls"
+  deleteButtonsContainer.style.border = "thin solid lightgrey"
+  deleteButtonsContainer.style.borderRadius = "0.5rem"
+  deleteButtonsContainer.style.display = shouldShowDeleteButtons()
+    ? "flex"
+    : "none"
+  deleteButtonsContainer.style.flexDirection = "column"
+  deleteButtonsContainer.style.maxWidth = "max-content"
+  deleteButtonsContainer.style.padding = "1rem 1rem 0"
+  deleteButtonsContainer.innerHTML = `
+    <p style="font-size: smaller">
+      <a href="https://scpwiki.com/usertools#delete-applications">Delete applications</a> by ${supportUser()}
+    </p>
+    <p id="delete-applications-buttons" style="
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    "></p>
+  `
+
+  scriptControlContainer.appendChild(deleteButtonsContainer)
+
   // Create the buttons
   const deleteRecentButton = document.createElement("button")
   deleteRecentButton.innerText = "Delete recent applications"
@@ -390,33 +433,8 @@ async function nextPage(messageElement) {
     .trim()
   deleteAllButton.addEventListener("click", () => deleteApplications(true))
 
-  const deleteButtonsContainer = document.createElement("div")
-  deleteButtonsContainer.style.border = "thin solid lightgrey"
-  deleteButtonsContainer.style.borderRadius = "0.5rem"
-  deleteButtonsContainer.style.display = shouldShowDeleteButtons()
-    ? "flex"
-    : "none"
-  deleteButtonsContainer.style.flexDirection = "column"
-  deleteButtonsContainer.style.maxWidth = "max-content"
-  deleteButtonsContainer.style.padding = "1rem 1rem 0"
-  deleteButtonsContainer.style.margin = "1.5rem 0 1.5rem auto"
-  deleteButtonsContainer.innerHTML = `
-    <p style="font-size: smaller">
-      <a href="https://scpwiki.com/usertools#delete-applications">Delete applications userscript</a> by ${supportUser()}
-    </p>
-    <p id="delete-buttons" style="
-      display: flex;
-      flex-direction: row;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-    "></p>
-  `
-
-  document
-    .getElementById("message-area")
-    .parentElement.prepend(deleteButtonsContainer)
-  document
-    .getElementById("delete-buttons")
+  deleteButtonsContainer
+    .querySelector("#delete-applications-buttons")
     .append(deleteRecentButton, deleteAllButton)
 
   // Detect clicks to messages and inbox tabs and hide/show buttons as appropriate
