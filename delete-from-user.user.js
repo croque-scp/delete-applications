@@ -1,5 +1,5 @@
 /*
-Wikidot applications deleter userscript
+Wikidot user-specific message deleter userscript
 
 For installation instructions, see https://scpwiki.com/usertools
 */
@@ -7,38 +7,16 @@ For installation instructions, see https://scpwiki.com/usertools
 /* CHANGELOG
 
 v1.3.1 (2024-10-10)
-- Userscript controls are now stored in a generic container available to other userscripts.
-
-v1.3.0 (2023-09-08)
-- Added changelog.
-- Removed extra commas from the confirmation popup when deleting applications from more than one site.
-- Deletes now execute in batches of 100 separated by a short delay to bypass Wikidot's single-request limit of 996.
-- Made buttons larger and added more support links.
-
-v1.2.0 (2023-07-07)
-- Added a list of sites to the deletion confirmation popup that tells you which Wikidot sites the applications come from, and how many there are per site.
-
-v1.1.0 (2022-04-11)
-- Added new feature 'delete recent applications' that deletes applications page-by-page until encountering a page with no applications.
-- Removed feature 'delete applications on current page'.
-- After scanning pages of messages, script now puts you back on the first page instead of leaving you wherever it stopped.
-- The delete buttons are now visible on all pages of the inbox instead of just the first.
-
-v1.0.1 (2022-03-06)
-- Hid buttons when reading a message.
-- Fixed deletion confirmation popup interfering with message composer UI.
-
-v1.0.0 (2022-03-01)
 - Created userscript.
 */
 
 // ==UserScript==
-// @name        Wikidot applications deleter
-// @description Adds a button to delete applications from your Wikidot inbox.
+// @name        Wikidot user PM deleter
+// @description Adds a button to delete PMs from a user from your Wikidot inbox.
 // @author      Croquembouche
 // @version     v1.3.1
-// @updateURL   https://github.com/croque-scp/delete-applications/raw/main/delete-applications.user.js
-// @downloadURL https://github.com/croque-scp/delete-applications/raw/main/delete-applications.user.js
+// @updateURL   https://github.com/croque-scp/delete-applications/raw/main/delete-from-user.user.js
+// @downloadURL https://github.com/croque-scp/delete-applications/raw/main/delete-from-user.user.js
 // @supportURL  https://www.wikidot.com/account/messages#/new/2893766
 // @match       https://www.wikidot.com/account/messages*
 // ==/UserScript==
@@ -47,7 +25,7 @@ v1.0.0 (2022-03-01)
 
 /* ===== Utilities ===== */
 
-const deleterDebug = log => console.debug("Applications deleter:", log)
+const deleterDebug = log => console.debug("User PM deleter:", log)
 
 const supportUser = showAvatar => `
   ${
@@ -78,12 +56,6 @@ function countSelected(messages) {
   return messages.reduce((a, b) => a + b.isSelected, 0)
 }
 
-class Counter {
-  constructor(array) {
-    array.forEach(val => (this[val] = (this[val] || 0) + 1))
-  }
-}
-
 /**
  * Waits for the given number of milliseconds.
  * @param {Number} ms
@@ -103,26 +75,9 @@ class Message {
     /** @type {String} */
     this.id = this.selector.value
 
-    // Extract the sender and the subject
+    // Extract the sender
     const from = messageElement.querySelector("td .from .printuser")
-    this.fromWikidot =
-      !from.classList.contains("avatarhover") && from.innerText === "Wikidot"
-    this.subject = messageElement.querySelector(".subject").innerText
-    this.previewText = messageElement.querySelector(".preview").innerText
-
-    // Is this message an application?
-    this.isApplication =
-      this.fromWikidot &&
-      this.subject === "You received a membership application"
-
-    if (this.isApplication) {
-      // Which wiki is the application for?
-      const wikiMatch = this.previewText.match(
-        /applied for membership on (.*), one of your sites/
-      )
-      if (wikiMatch) this.applicationWiki = wikiMatch[1]
-      else this.isApplication = false
-    }
+    this.sender = from.innerText
   }
 
   select() {
@@ -138,15 +93,16 @@ class Message {
 
 /* ===== */
 
-async function deleteApplications(deleteAll = false) {
-  const applications = []
+async function deleteMessagesFromUser(username = "") {
+  if (!username) return
+
+  const messagesToDelete = []
   const messageElement = document.getElementById("message-area")
 
-  let goToNextPage = true
   let thereAreMorePages = true
 
   const scanningModal = new OZONE.dialogs.WaitBox()
-  scanningModal.content = "Scanning your inbox for applications..."
+  scanningModal.content = `Scanning your inbox for messages from ${username}...`
   scanningModal.show()
 
   await firstPage(messageElement)
@@ -159,27 +115,24 @@ async function deleteApplications(deleteAll = false) {
       messages.forEach(message => message.select())
     }
 
-    // Deselect all messages that are not applications
+    // Deselect all messages that are not from the user
     messages.forEach(message => {
-      if (!message.isApplication) message.deselect()
+      if (message.sender !== username) message.deselect()
     })
 
     // Save all selected messages
     const selectedMessages = messages.filter(message => message.isSelected)
-    deleterDebug(`Found ${selectedMessages.length} applications`)
-    applications.push(selectedMessages)
+    deleterDebug(`Found ${selectedMessages.length} messages`)
+    messagesToDelete.push(selectedMessages)
 
-    // If there were no selected messages, and we are only deleting recent messages (i.e. deleteAll is false), don't go to the next page
-    if (selectedMessages.length === 0 && !deleteAll) goToNextPage = false
-
-    if (goToNextPage) thereAreMorePages = await nextPage(messageElement)
-  } while (goToNextPage && thereAreMorePages)
+    thereAreMorePages = await nextPage(messageElement)
+  } while (thereAreMorePages)
 
   // Reset UI back to the first page
   await firstPage(messageElement)
 
   // Delete all saved messages
-  createDeleteConfirmationModal(applications.flat())
+  createDeleteConfirmationModal(messagesToDelete.flat())
 }
 
 /**
@@ -188,26 +141,21 @@ async function deleteApplications(deleteAll = false) {
 function createDeleteConfirmationModal(messages) {
   const messagesCount = messages.length
 
-  // Collate the wikis that the applications were for
-  const wikiCounter = new Counter(messages.map(m => m.applicationWiki))
   // Produce a confirmation modal with the number of applications to delete
   const confirmModal = new OZONE.dialogs.ConfirmationDialog()
-  const applicationSitesList = Object.entries(wikiCounter).map(
-    ([wiki, count]) => `<li>${wiki}: ${count}</li>`
-  )
   confirmModal.content = `
-    <p>Delete ${messagesCount} applications?</p>
+    <p>Delete ${messagesCount} messages?</p>
+    <p>This is <strong>not reversible.</strong></p>
     <p><em>Please report any issues during the deletion process to ${supportUser(
       true
     )}.</em></p>
-    <ul>${applicationSitesList.join("")}</ul>
   `
-  confirmModal.buttons = ["cancel", "delete applications"]
+  confirmModal.buttons = ["cancel", "delete messages"]
   confirmModal.addButtonListener("cancel", confirmModal.close)
-  confirmModal.addButtonListener("delete applications", async () => {
+  confirmModal.addButtonListener("delete messages", async () => {
     const progressModal = new OZONE.dialogs.SuccessBox()
     progressModal.content = `
-      <p>Deleting ${messagesCount} applications...</p>
+      <p>Deleting ${messagesCount} messages...</p>
       <p id="delete-progress-text"></p>
       <progress id="delete-progress" style="width: 100%"></progress>
     `
@@ -219,7 +167,7 @@ function createDeleteConfirmationModal(messages) {
       async (batchIndex, batchCount, batchSize) => {
         if (batchCount === 1) return
         document.getElementById("delete-progress-text").textContent = `
-          Batch ${batchIndex + 1} of ${batchCount} (${batchSize} applications)
+          Batch ${batchIndex + 1} of ${batchCount} (${batchSize} messages)
         `
         document.getElementById("delete-progress").max = batchCount
         document.getElementById("delete-progress").value = batchIndex + 1
@@ -232,13 +180,13 @@ function createDeleteConfirmationModal(messages) {
     if (success) {
       const successModal = new OZONE.dialogs.SuccessBox()
       successModal.content = `
-        <p>Deleted ${messagesCount} applications.<p>
+        <p>Deleted ${messagesCount} messages.<p>
       `
       successModal.show()
     } else {
       const errorModal = new OZONE.dialogs.ErrorDialog()
       errorModal.content = `
-        <p>Failed to delete applications.</p>
+        <p>Failed to delete messages.</p>
         <p>Please send a message to ${supportUser(true)}.</p>
       `
       errorModal.show()
@@ -387,7 +335,7 @@ async function nextPage(messageElement) {
   }
 
   const deleteButtonsContainer = document.createElement("div")
-  deleteButtonsContainer.id = "delete-applications-controls"
+  deleteButtonsContainer.id = "delete-from-user-controls"
   deleteButtonsContainer.style.border = "thin solid lightgrey"
   deleteButtonsContainer.style.borderRadius = "0.5rem"
   deleteButtonsContainer.style.display = shouldShowDeleteButtons()
@@ -395,47 +343,42 @@ async function nextPage(messageElement) {
     : "none"
   deleteButtonsContainer.style.flexDirection = "column"
   deleteButtonsContainer.style.maxWidth = "max-content"
-  deleteButtonsContainer.style.padding = "1rem 1rem 0"
+  deleteButtonsContainer.style.padding = "1rem"
   deleteButtonsContainer.innerHTML = `
     <p style="font-size: smaller">
-      <a href="https://scpwiki.com/usertools#delete-applications">Delete applications</a> by ${supportUser()}
+      <a href="https://scpwiki.com/usertools#delete-applications">Delete PMs from user</a> by ${supportUser()}
     </p>
-    <p id="delete-applications-buttons" style="
-      display: flex;
-      flex-direction: row;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-    "></p>
   `
-
   scriptControlContainer.appendChild(deleteButtonsContainer)
 
-  // Create the buttons
-  const deleteRecentButton = document.createElement("button")
-  deleteRecentButton.innerText = "Delete recent applications"
-  deleteRecentButton.classList.add("red", "btn", "btn-danger")
-  deleteRecentButton.title = `
-    Delete recent applications.
-    Deletes applications on the first page, then the second, and so on, until a page with no applications is found.
-  `
-    .replace(/\s+/g, " ")
-    .trim()
-  deleteRecentButton.addEventListener("click", () => deleteApplications(false))
+  const deleteForm = document.createElement("form")
+  deleteForm.id = "delete-from-user-buttons"
+  deleteForm.style.display = "flex"
+  deleteForm.style.flexDirection = "row"
+  deleteForm.style.flexWrap = "wrap"
+  deleteForm.style.gap = "0.5rem"
+  deleteButtonsContainer.appendChild(deleteForm)
 
-  const deleteAllButton = document.createElement("button")
-  deleteAllButton.innerText = "Delete all applications"
-  deleteAllButton.classList.add("red", "btn", "btn-danger")
-  deleteAllButton.title = `
-    Delete all applications in your inbox.
-    May take a while if you have a lot.
-  `
-    .replace(/\s+/g, " ")
-    .trim()
-  deleteAllButton.addEventListener("click", () => deleteApplications(true))
+  const usernameField = document.createElement("input")
+  usernameField.classList.add("form-control")
+  usernameField.style.width = "auto"
+  usernameField.style.flex = "1"
+  usernameField.placeholder = "Enter username"
+  deleteForm.appendChild(usernameField)
 
-  deleteButtonsContainer
-    .querySelector("#delete-applications-buttons")
-    .append(deleteRecentButton, deleteAllButton)
+  const deleteButton = document.createElement("input")
+  deleteButton.type = "submit"
+  deleteButton.value = "Delete"
+  deleteButton.classList.add("red", "btn", "btn-danger")
+  deleteButton.title = `Delete all messages from the specified user.`
+  deleteForm.appendChild(deleteButton)
+
+  deleteForm.addEventListener("submit", submitEvent => {
+    deleteMessagesFromUser(usernameField.value)
+    submitEvent.preventDefault()
+    submitEvent.stopPropagation()
+    return false
+  })
 
   // Detect clicks to messages and inbox tabs and hide/show buttons as appropriate
   addEventListener("click", () =>
