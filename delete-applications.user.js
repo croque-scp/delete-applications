@@ -45,6 +45,26 @@ v1.0.0 (2022-03-01)
 
 /* global WIKIDOT, OZONE */
 
+const applicationSubjectsByLang = [
+  "You received a membership application", // English
+  "Heu rebut una sol·licitud de pertinença", // Catalan
+  "您收到了一份成员资格申请", // Chinese (Simplified)
+  "您收到了一封成員資格申請書", // Chinese (Traditional)
+  "Dostal jsi žádanku o členství", // Czech
+  "Vi ricevis membriĝpeton", // Esperanto
+  "Vous avez reçu une demande d'adhésion", // French
+  "Sie haben ein Antrag zur Mitgliedschaft erhalten", // German
+  "Hai ricevuto una domanda di adesione", // Italian
+  "参加希望書を受け取りました。", // Japanese
+  "회원가입 신청서를 받았습니다.", // Korean
+  "Has recibido una petición de membresía", // Spanish
+  "Otrzymałeś aplikację o członkostwo", // Polish
+  "Вам подана заявка на участие", // Russian
+  "Добили сте пријаву за чланство", // Serbian
+  "Bạn đã nhận được đơn tham gia", // Vietnamese
+  // Add more translations here
+]
+
 /* ===== Utilities ===== */
 
 const deleterDebug = log => console.debug("Applications deleter:", log)
@@ -110,10 +130,13 @@ class Message {
     this.subject = messageElement.querySelector(".subject").innerText
     this.previewText = messageElement.querySelector(".preview").innerText
 
-    // Is this message an application?
     this.isApplication =
-      this.fromWikidot &&
-      this.subject === "You received a membership application"
+      this.fromWikidot && applicationSubjectsByLang.includes(this.subject)
+
+    // Is this message an application?
+    if (this.fromWikidot && subjectTexts.includes(this.subject)) {
+      this.isApplication = true
+    }
 
     if (this.isApplication) {
       // Which wiki is the application for?
