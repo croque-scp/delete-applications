@@ -45,6 +45,85 @@ v1.0.0 (2022-03-01)
 
 /* global WIKIDOT, OZONE */
 
+const applicationTextsByLang = {
+  english: {
+    subject: "You received a membership application",
+    preview: /applied for membership on (.*), one of your sites/,
+  },
+  catalan: {
+    subject: "Heu rebut una sol·licitud de pertinença",
+    preview: /ha sol·licitat la subscripció a (.*), un dels vostres llocs/,
+  },
+  chineseSimplified: {
+    subject: "您收到了一份成员资格申请",
+    preview: /申请成为您管理的网站 (.*) 的成员/,
+  },
+  chineseTraditional: {
+    subject: "您收到了一封成員資格申請書",
+    preview: /申請加入您管理的網站 (.*)/,
+  },
+  czech: {
+    subject: "Dostal jsi žádanku o členství",
+    preview: /přijal členství na stránce (.*), jedné ze tvých stránek/,
+  },
+  esperanto: {
+    subject: "Vi ricevis membriĝpeton",
+    preview: /petis membriĝon de (.*), unu el viaj retejoj/,
+  },
+  french: {
+    subject: "Vous avez reçu une demande d'adhésion",
+    preview: /a demandé à devenir membre de (.*), un de vos sites/,
+  },
+  german: {
+    subject: "Sie haben ein Antrag zur Mitgliedschaft erhalten",
+    preview: /bewirbt sich um Mitgliedschaft auf (.*), einer Ihrer Sites/,
+  },
+  italian: {
+    subject: "Hai ricevuto una domanda di adesione",
+    preview: /ha chiesto l'adesione su (.*), uno dei tuoi siti/,
+  },
+  japanese: {
+    subject: "参加希望書を受け取りました。",
+    preview: /さんからの参加希望が(.*)サイトに届いています/,
+  },
+  japaneseCorrections: {
+    subject: "参加申請書を受け取りました",
+    preview: /さんからの参加申請が(.*)サイトに届いています/,
+  },
+  korean: {
+    subject: "회원가입 신청서를 받았습니다.",
+    preview: /가 사이트 (.*)에 회원가입을 신청하였습니다/,
+  },
+  portugueseBrazil: {
+    subject: "Você recebeu um pedido de associação",
+    preview: /solicitou ser membro em (.*), um dos seus sites/,
+  },
+  spanish: {
+    subject: "Has recibido una petición de membresía",
+    preview: /ha hecho una petición de miembro a (.*), uno de tus sitios/,
+  },
+  polish: {
+    subject: "Otrzymałeś aplikację o członkostwo",
+    preview: /zaaplikował o członkostwo na (.*), jednej z Twoich stron/,
+  },
+  russian: {
+    subject: "Вам подана заявка на участие",
+    preview: /подал заявку на вступление в (.*), один из Ваших сайтов/,
+  },
+  serbian: {
+    subject: "Добили сте пријаву за чланство",
+    preview: /се пријавио за чланство на сајту (.*), једном од ваших сајтова/,
+  },
+  serboCroatian: {
+    subject: "Dobili ste prijavu za članstvo",
+    preview: /se prijavio za članstvo na sajtu (.*), jednom od vaših sajtova/,
+  },
+  vietnamese: {
+    subject: "Bạn đã nhận được đơn tham gia",
+    preview: /đã ứng tuyển thành viên ở (.*), một trong các trang của bạn/,
+  },
+}
+
 /* ===== Utilities ===== */
 
 const deleterDebug = log => console.debug("Applications deleter:", log)
@@ -110,10 +189,13 @@ class Message {
     this.subject = messageElement.querySelector(".subject").innerText
     this.previewText = messageElement.querySelector(".preview").innerText
 
-    // Is this message an application?
     this.isApplication =
-      this.fromWikidot &&
-      this.subject === "You received a membership application"
+      this.fromWikidot && applicationSubjectsByLang.includes(this.subject)
+
+    // Is this message an application?
+    if (this.fromWikidot && subjectTexts.includes(this.subject)) {
+      this.isApplication = true
+    }
 
     if (this.isApplication) {
       // Which wiki is the application for?
