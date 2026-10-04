@@ -6,6 +6,9 @@ For installation instructions, see https://scpwiki.com/usertools
 
 /* CHANGELOG
 
+v1.4.0 (2026-10-04)
+- Moved to https://github.com/croque-scp/tools; updates now come from there.
+
 v1.3.1 (2024-10-10)
 - Created userscript.
 */
@@ -14,9 +17,9 @@ v1.3.1 (2024-10-10)
 // @name        Wikidot user PM deleter
 // @description Adds a button to delete PMs from a user from your Wikidot inbox.
 // @author      Croquembouche
-// @version     v1.3.1
-// @updateURL   https://github.com/croque-scp/delete-applications/raw/main/delete-from-user.user.js
-// @downloadURL https://github.com/croque-scp/delete-applications/raw/main/delete-from-user.user.js
+// @version     v1.4.0
+// @updateURL   https://github.com/croque-scp/tools/raw/main/delete-from-user.user.js
+// @downloadURL https://github.com/croque-scp/tools/raw/main/delete-from-user.user.js
 // @supportURL  https://www.wikidot.com/account/messages#/new/2893766
 // @match       https://www.wikidot.com/account/messages*
 // ==/UserScript==
@@ -48,7 +51,7 @@ const supportUser = showAvatar => `
 
 function getMessagesOnPage() {
   return Array.from(document.querySelectorAll("tr.message")).map(
-    el => new Message(el)
+    el => new Message(el),
   )
 }
 
@@ -147,7 +150,7 @@ function createDeleteConfirmationModal(messages) {
     <p>Delete ${messagesCount} messages?</p>
     <p>This is <strong>not reversible.</strong></p>
     <p><em>Please report any issues during the deletion process to ${supportUser(
-      true
+      true,
     )}.</em></p>
   `
   confirmModal.buttons = ["cancel", "delete messages"]
@@ -172,7 +175,7 @@ function createDeleteConfirmationModal(messages) {
         document.getElementById("delete-progress").max = batchCount
         document.getElementById("delete-progress").value = batchIndex + 1
         await wait(1500)
-      }
+      },
     )
 
     WIKIDOT.modules.DashboardMessagesModule.app.refresh()
@@ -244,7 +247,7 @@ function deleteMessages(messageIds) {
           event: "removeMessages",
           messages: messageIds,
         },
-        resolve
+        resolve,
       )
     } catch (error) {
       reject(error)
@@ -386,6 +389,6 @@ async function nextPage(messageElement) {
       deleteButtonsContainer.style.display = shouldShowDeleteButtons()
         ? "flex"
         : "none"
-    }, 500)
+    }, 500),
   )
 })()

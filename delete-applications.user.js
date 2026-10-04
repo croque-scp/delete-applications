@@ -6,6 +6,10 @@ For installation instructions, see https://scpwiki.com/usertools
 
 /* CHANGELOG
 
+v1.4.0 (2026-10-04)
+- Detects applications in Wikidot's other interface languages (thanks Talcite).
+- Moved to https://github.com/croque-scp/tools; updates now come from there.
+
 v1.3.1 (2024-10-10)
 - Userscript controls are now stored in a generic container available to other userscripts.
 
@@ -36,9 +40,9 @@ v1.0.0 (2022-03-01)
 // @name        Wikidot applications deleter
 // @description Adds a button to delete applications from your Wikidot inbox.
 // @author      Croquembouche
-// @version     v1.3.1
-// @updateURL   https://github.com/croque-scp/delete-applications/raw/main/delete-applications.user.js
-// @downloadURL https://github.com/croque-scp/delete-applications/raw/main/delete-applications.user.js
+// @version     v1.4.0
+// @updateURL   https://github.com/croque-scp/tools/raw/main/delete-applications.user.js
+// @downloadURL https://github.com/croque-scp/tools/raw/main/delete-applications.user.js
 // @supportURL  https://www.wikidot.com/account/messages#/new/2893766
 // @match       https://www.wikidot.com/account/messages*
 // ==/UserScript==
@@ -149,7 +153,7 @@ const supportUser = showAvatar => `
 
 function getMessagesOnPage() {
   return Array.from(document.querySelectorAll("tr.message")).map(
-    el => new Message(el)
+    el => new Message(el),
   )
 }
 
@@ -189,19 +193,17 @@ class Message {
     this.subject = messageElement.querySelector(".subject").innerText
     this.previewText = messageElement.querySelector(".preview").innerText
 
-    this.isApplication =
-      this.fromWikidot && applicationSubjectsByLang.includes(this.subject)
-
-    // Is this message an application?
-    if (this.fromWikidot && subjectTexts.includes(this.subject)) {
-      this.isApplication = true
-    }
+    // Is this message an application, and in which language?
+    const applicationTexts = this.fromWikidot
+      ? Object.values(applicationTextsByLang).find(
+          texts => texts.subject === this.subject,
+        )
+      : undefined
+    this.isApplication = Boolean(applicationTexts)
 
     if (this.isApplication) {
       // Which wiki is the application for?
-      const wikiMatch = this.previewText.match(
-        /applied for membership on (.*), one of your sites/
-      )
+      const wikiMatch = this.previewText.match(applicationTexts.preview)
       if (wikiMatch) this.applicationWiki = wikiMatch[1]
       else this.isApplication = false
     }
@@ -275,12 +277,12 @@ function createDeleteConfirmationModal(messages) {
   // Produce a confirmation modal with the number of applications to delete
   const confirmModal = new OZONE.dialogs.ConfirmationDialog()
   const applicationSitesList = Object.entries(wikiCounter).map(
-    ([wiki, count]) => `<li>${wiki}: ${count}</li>`
+    ([wiki, count]) => `<li>${wiki}: ${count}</li>`,
   )
   confirmModal.content = `
     <p>Delete ${messagesCount} applications?</p>
     <p><em>Please report any issues during the deletion process to ${supportUser(
-      true
+      true,
     )}.</em></p>
     <ul>${applicationSitesList.join("")}</ul>
   `
@@ -306,7 +308,7 @@ function createDeleteConfirmationModal(messages) {
         document.getElementById("delete-progress").max = batchCount
         document.getElementById("delete-progress").value = batchIndex + 1
         await wait(1500)
-      }
+      },
     )
 
     WIKIDOT.modules.DashboardMessagesModule.app.refresh()
@@ -378,7 +380,7 @@ function deleteMessages(messageIds) {
           event: "removeMessages",
           messages: messageIds,
         },
-        resolve
+        resolve,
       )
     } catch (error) {
       reject(error)
@@ -525,6 +527,6 @@ async function nextPage(messageElement) {
       deleteButtonsContainer.style.display = shouldShowDeleteButtons()
         ? "flex"
         : "none"
-    }, 500)
+    }, 500),
   )
 })()
